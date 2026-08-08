@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlockStats - Flock Camera Destruction Tracker</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --bg2: #141414;
+    --bg3: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e8e6;
+    --muted: #888884;
+    --green: #22c55e;
+    --green-dim: #15803d;
+    --green-bg: rgba(34,197,94,0.08);
+    --red: #ef4444;
+    --red-dim: #b91c1c;
+    --red-bg: rgba(239,68,68,0.07);
+    --accent: #f5f5f5;
+    --mono: 'Courier New', Courier, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,13,13,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+  }
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--green);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .nav-logo img {
+    height: 26px; width: auto;
+  }
+  .nav-logo-by {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: normal;
+    letter-spacing: 0.05em;
+  }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* HERO */
+  .hero {
+    border-bottom: 1px solid var(--border);
+    padding: 4rem 2rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--green);
+  }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 1.05rem;
+    max-width: 560px;
+    margin-bottom: 2rem;
+  }
+
+  /* ALERT BANNER */
+  .alert {
+    background: rgba(34,197,94,0.06);
+    border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 6px;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.88rem;
+    color: #a7f3c0;
+    margin-bottom: 0.5rem;
+  }
+  .alert strong { color: var(--green); }
+
+  /* STATS GRID */
+  .stats-section {
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg2);
+    padding: 1.5rem;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 2.2rem;
+    font-weight: bold;
+    line-height: 1;
+  }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.white { color: #fff; }
+  .stat-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
+  /* NETWORK STATUS */
+  .network-status {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .network-status-left { display: flex; flex-direction: column; gap: 0.3rem; }
+  .network-status-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .network-status-note {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .network-status-right {
+    display: flex; align-items: baseline; gap: 0.5rem;
+  }
+  .network-status-pct {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--red);
+  }
+  .network-status-of {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  /* SECTION COMMON */
+  .section {
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .section-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap; gap: 0.5rem;
+  }
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+  .count-badge {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid rgba(34,197,94,0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+  }
+
+  /* INCIDENT TABLE */
+  .incident-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .incident {
+    background: var(--bg2);
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    align-items: start;
+    transition: background 0.1s;
+  }
+  .incident:hover { background: var(--bg3); }
+  .incident-date {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+  .incident-location {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #fff;
+    margin-bottom: 0.2rem;
+  }
+  .incident-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .incident-count {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid rgba(34,197,94,0.15);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .incident-count.unknown { color: var(--muted); background: transparent; border-color: var(--border); }
+
+  /* ACTIVE WEEK BANNER */
+  .week-banner {
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 6px;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.85rem;
+    color: #fca5a5;
+    margin-bottom: 1.5rem;
+  }
+  .week-banner strong { color: var(--red); }
+
+  /* MAP SECTION */
+  .state-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .state-card {
+    background: var(--bg2);
+    padding: 0.85rem 1rem;
+  }
+  .state-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.2rem;
+  }
+  .state-count {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--green);
+    font-weight: bold;
+  }
+  .state-count.low { color: #86efac; }
+  .state-count.med { color: #22c55e; }
+  .state-count.high { color: #16a34a; font-size: 1.4rem; }
+  .state-label { font-size: 0.68rem; color: var(--muted); }
+
+  /* CITIES CANCELLED */
+  .city-grid {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+  }
+  .city-pill {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--bg2);
+  }
+  .city-pill.cancelled {
+    border-color: rgba(34,197,94,0.25);
+    color: #86efac;
+    background: var(--green-bg);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 2.5rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 0.78rem;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  }
+  footer a { color: var(--muted); text-decoration: underline; }
+  footer a:hover { color: var(--text); }
+
+  /* TICKER */
+  .ticker-wrap {
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0.6rem 0;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    white-space: nowrap;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 35s linear infinite;
+  }
+  @keyframes ticker {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+  }
+  .ticker-sep { margin: 0 2rem; color: var(--border); }
+
+  @media (max-width: 600px) {
+    nav { padding: 0.75rem 1rem; }
+    .hero, .stats-section, .section { padding-left: 1rem; padding-right: 1rem; }
+    .incident { grid-template-columns: 1fr; }
+    .incident-date { padding-top: 0; }
+    h1 { font-size: 2rem; }
+    footer { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    [ FlockStats ]
+    <span class="nav-logo-by">by</span>
+    <img src="https://nlckysolutions.org/logo.png" alt="NlckySolutions">
+    <span class="nav-logo-by">NlckySolutions</span>
+  </a>
+  <div class="nav-links">
+    <a href="#incidents">Incidents</a>
+    <a href="#states">By State</a>
+    <a href="#cities">Cities</a>
+  </div>
+</nav>
+
+<div class="ticker-wrap">
+  <span class="ticker-inner">
+    ★ Winona MN: ALL 8 cameras sawed off and stolen
+    <span class="ticker-sep">///</span>
+    Dallas TX: 25 cameras vandalized since March 2026
+    <span class="ticker-sep">///</span>
+    Duluth MN: 5 cameras stolen, 1 damaged | June/July 2026
+    <span class="ticker-sep">///</span>
+    Albany GA: 2 cameras reportedly exploded | July 2026
+    <span class="ticker-sep">///</span>
+    Oregon: 9 cameras down in single run | 2025
+    <span class="ticker-sep">///</span>
+    Suffolk VA: 13 cameras destroyed over 6 months | Jeffrey Sovern, not guilty plea
+    <span class="ticker-sep">///</span>
+    National Week of Action Against ALPRs: Aug 16-22, 2026
+    <span class="ticker-sep">///</span>
+  </span>
+</div>
+
+<div class="hero">
+  <!--<div class="hero-eyebrow">// flockstats.org | updated as incidents are reported</div>-->
+  <h1>Flock cameras<br>are going <em>dark.</em></h1>
+  <p class="hero-sub">Tracking every confirmed incident of Flock Safety ALPR camera destruction, vandalism, and removal across the United States. Data sourced from public news reports and police records.</p>
+  <a href="https://forms.gle/zWwBxEYfd1JsgKn89" target="_blank" style="display:inline-flex;align-items:center;gap:0.75rem;background:rgba(34,197,94,0.08);border:1.5px solid rgba(34,197,94,0.4);border-radius:8px;padding:1rem 1.5rem;text-decoration:none;color:#a7f3c0;font-size:1rem;font-weight:600;font-family:var(--mono);letter-spacing:0.02em;transition:background 0.15s,border-color 0.15s;" onmouseover="this.style.background='rgba(34,197,94,0.14)';this.style.borderColor='rgba(34,197,94,0.7)'" onmouseout="this.style.background='rgba(34,197,94,0.08)';this.style.borderColor='rgba(34,197,94,0.4)'">
+    <span style="font-size:1.3rem;">📡</span>
+    <span>Report a camera you've seen down or vandalized here</span>
+  </a>
+</div>
+
+<div class="stats-section" id="stats">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Cameras destroyed</div>
+      <div class="stat-value green" id="stat-destroyed">—</div>
+      <div class="stat-sub">known minimum (est.)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Incidents documented</div>
+      <div class="stat-value white" id="stat-cases">—</div>
+      <div class="stat-sub"><span id="stat-states">—</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Flock network</div>
+      <div class="stat-value red" id="stat-network">—</div>
+      <div class="stat-sub">cameras nationwide</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cities cancelled contracts</div>
+      <div class="stat-value green" id="stat-cities">—</div>
+      <div class="stat-sub">and counting</div>
+    </div>
+  </div>
+
+  <div class="network-status">
+    <div class="network-status-left">
+      <div class="network-status-label">Network still operational</div>
+      <div class="network-status-note" id="pbar-note">loading...</div>
+    </div>
+    <div class="network-status-right">
+      <div class="network-status-pct" id="pbar-label-right">—</div>
+      <div class="network-status-of">of network online</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="incidents">
+  <div class="section-header">
+    <h2>Confirmed Incidents</h2>
+    <span class="count-badge" id="badge-cases">26+ documented</span>
+  </div>
+
+  <div class="week-banner">
+    <strong>Accelerating fast.</strong> The Institute for Justice documented 26 cases as of July 2026: but Dallas alone logged 25 attacks since March, and Minnesota has seen 15+ cities hit in July-August. The real number is significantly higher.
+  </div>
+
+  <div class="incident-list">
+
+    <div class="incident">
+      <div class="incident-date">Aug 1, 2026</div>
+      <div>
+        <div class="incident-location">Winona, MN: ALL cameras gone</div>
+        <div class="incident-desc">All 8 Flock cameras sawed from poles and stolen overnight in what police called a "coordinated theft." Two additional cameras on the Mississippi River Bridge also taken. Poles found thrown in nearby weeds. No suspects. Total loss ~$24,000.</div>
+      </div>
+      <div class="incident-count">10 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Jul 2026</div>
+      <div>
+        <div class="incident-location">Albany, GA: cameras exploded</div>
+        <div class="incident-desc">FOX affiliate reported two Flock cameras exploded in Albany, Georgia. Method and suspects unknown.</div>
+      </div>
+      <div class="incident-count">2 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Jun-Jul 2026</div>
+      <div>
+        <div class="incident-location">Duluth, MN: serial thefts</div>
+        <div class="incident-desc">Five cameras stolen and one damaged across two months. No arrests made.</div>
+      </div>
+      <div class="incident-count">6 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Mar-Aug 2026</div>
+      <div>
+        <div class="incident-location">Dallas, TX: widespread vandalism</div>
+        <div class="incident-desc">Dallas police began tracking damage after documenting 10 incidents in March 2026. Total climbed to 25 attacked cameras across the city by August. Flock Safety waived most replacement costs.</div>
+      </div>
+      <div class="incident-count">25 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Jun 2026</div>
+      <div>
+        <div class="incident-location">Edina, MN: bat attack + graffiti</div>
+        <div class="incident-desc">Camera and solar panel pummeled with a rounded object "similar to a baseball bat" on France Ave & W 40th St. Nearby Minneapolis pumphouse spray-painted with anti-Flock message. Five total incidents in Edina Apr-Jun 2026.</div>
+      </div>
+      <div class="incident-count">5+ cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Jul 2026</div>
+      <div>
+        <div class="incident-location">Plymouth, MN: smashed + cord cut</div>
+        <div class="incident-desc">One camera found "in pieces at the base of the pole." A second had its power cord cut. Both incidents in July.</div>
+      </div>
+      <div class="incident-count">2 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">May 2026</div>
+      <div>
+        <div class="incident-location">Eden Prairie, MN: wires cut</div>
+        <div class="incident-desc">Camera on Eden Prairie Drive had wires cut. No suspects identified.</div>
+      </div>
+      <div class="incident-count">1 camera</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">May 2026</div>
+      <div>
+        <div class="incident-location">Minnetonka, MN: damaged</div>
+        <div class="incident-desc">Two cameras reported damaged. No further details released.</div>
+      </div>
+      <div class="incident-count">2 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">May 2026</div>
+      <div>
+        <div class="incident-location">Nowthen (Anoka County), MN</div>
+        <div class="incident-desc">Deputy reported a damaged Flock camera at Viking Blvd & Baugh St. No arrests.</div>
+      </div>
+      <div class="incident-count">1 camera</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Jul 2026</div>
+      <div>
+        <div class="incident-location">Alexandria, VA: arrested</div>
+        <div class="incident-desc">Gabriel Brown, 21, arrested for vandalizing two Flock cameras.</div>
+      </div>
+      <div class="incident-count">2 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Apr-Oct 2025</div>
+      <div>
+        <div class="incident-location">North Suffolk, VA: systematic dismantling</div>
+        <div class="incident-desc">Jeffrey Scott Sovern, 41, USAF engineer, accused of systematically dismantling 13 cameras over 6 months using vice grips. Began by redirecting cameras, escalated to knocking poles down, then throwing cameras off bridges onto interstates. Found with 6 solar panels at home. Faces 19 felony counts + 6 misdemeanors. Pleaded not guilty, argues technology is unconstitutional.</div>
+      </div>
+      <div class="incident-count">13 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Nov 2025</div>
+      <div>
+        <div class="incident-location">Newport News, VA: pole destroyed</div>
+        <div class="incident-desc">Pole holding a Flock camera destroyed. No suspect identified.</div>
+      </div>
+      <div class="incident-count">1 camera</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Oct 2025</div>
+      <div>
+        <div class="incident-location">Eugene & Springfield, OR: 9 down</div>
+        <div class="incident-desc">Nine cameras severed from poles in what appeared to be a single coordinated run. Note left at base of a pole: "Hahaha get wrecked ya surveilling f*cks." At least one camera also spray-painted.</div>
+      </div>
+      <div class="incident-count">9 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">Feb 2026</div>
+      <div>
+        <div class="incident-location">La Mesa, CA: smashed on median</div>
+        <div class="incident-desc">Two cameras destroyed on Fletcher Parkway weeks after city council approved Flock contract continuation despite clear public opposition. One smashed and left on the median, one had key parts removed.</div>
+      </div>
+      <div class="incident-count">2 cameras</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Oakland, CA: paint attack</div>
+        <div class="incident-desc">Cameras in Oakland vandalized with thrown paint. Part of the California wave of incidents.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Upstate New York: electric saw</div>
+        <div class="incident-desc">Residents used electric saws to cut Flock camera poles down. Specific city not disclosed.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Idaho: truck ram</div>
+        <div class="incident-desc">Someone drove a truck directly into a Flock camera. Specific city undisclosed.</div>
+      </div>
+      <div class="incident-count">1 camera</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Ashland, OH: struck by vehicle</div>
+        <div class="incident-desc">Solar panels and camera poles found shattered, apparently struck by vehicles, bats, or clubs. City employees had to file purchase orders for replacement poles, panels, and wiring.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2025</div>
+      <div>
+        <div class="incident-location">West Virginia: arrested</div>
+        <div class="incident-desc">A man was arrested in June for destroying several Flock cameras. No further details disclosed publicly.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Michigan: $10,000 damage</div>
+        <div class="incident-desc">Police arrested someone accused of causing approximately $10,000 in damage to Flock cameras.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Faribault, MN: theft + disassembly</div>
+        <div class="incident-desc">Man in his 40s charged with stealing a Flock camera with intent to take it apart.</div>
+      </div>
+      <div class="incident-count">1 camera</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2025-26</div>
+      <div>
+        <div class="incident-location">Greenview, IL: vandalism</div>
+        <div class="incident-desc">Flock camera incident reported. Specific details not fully disclosed.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2025-26</div>
+      <div>
+        <div class="incident-location">Lisbon, CT: vandalism</div>
+        <div class="incident-desc">Flock camera incident reported. Specific details not fully disclosed.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">2026</div>
+      <div>
+        <div class="incident-location">Utah (Garfield County): vandalized on install day</div>
+        <div class="incident-desc">Garfield County Sheriff's Office reported a Flock camera vandalized within days of being installed.</div>
+      </div>
+      <div class="incident-count">1 camera</div>
+    </div>
+
+    <div class="incident">
+      <div class="incident-date">ongoing</div>
+      <div>
+        <div class="incident-location">Houston, TX: Cluster of incidents</div>
+        <div class="incident-desc">Houston authorities are actively working through a cluster of Flock camera incidents. Specific numbers not yet disclosed.</div>
+      </div>
+      <div class="incident-count unknown">unknown</div>
+    </div>
+
+    <div class="incident" style="border-top: 1px solid var(--border);">
+      <div class="incident-date">ongoing</div>
+      <div>
+        <div class="incident-location">Florida: Lawn chair protest</div>
+        <div class="incident-desc">One man in Florida sits in a lawn chair holding up a piece of cardboard on a pole to block a camera's view.</div>
+      </div>
+      <div class="incident-count" style="color:#facc15; background: rgba(250,204,21,0.07); border-color: rgba(250,204,21,0.15);">BLOCKED</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section" id="states">
+  <div class="section-header">
+    <h2>Incidents by State</h2>
+    <span class="count-badge">10+ states</span>
+  </div>
+  <div class="state-grid">
+    <div class="state-card">
+      <div class="state-name">Minnesota</div>
+      <div class="state-count high">15+</div>
+      <div class="state-label">incidents reported</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Texas</div>
+      <div class="state-count high">25+</div>
+      <div class="state-label">Dallas alone</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Virginia</div>
+      <div class="state-count med">4</div>
+      <div class="state-label">incidents, 1 arrested</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Oregon</div>
+      <div class="state-count med">2</div>
+      <div class="state-label">Eugene + Springfield</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">California</div>
+      <div class="state-count med">3</div>
+      <div class="state-label">Oakland, La Mesa +</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">New York</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">electric saw</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Idaho</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">truck ram</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Ohio</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">Ashland</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Michigan</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">$10k damage</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">West Virginia</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">arrested</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Georgia</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">Albany: exploded</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Illinois</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">Greenview</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Connecticut</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">Lisbon</div>
+    </div>
+    <div class="state-card">
+      <div class="state-name">Utah</div>
+      <div class="state-count low">1</div>
+      <div class="state-label">day of install</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="cities">
+  <div class="section-header">
+    <h2>Cities That Cancelled Contracts</h2>
+    <span class="count-badge">23+ cities</span>
+  </div>
+  <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem;">These cities formally cancelled or rejected Flock Safety contracts.</p>
+  <div class="city-grid">
+    <span class="city-pill cancelled">Fort Collins, CO</span>
+    <span class="city-pill cancelled">Eugene, OR</span>
+    <span class="city-pill cancelled">Madison, WI</span>
+    <span class="city-pill cancelled">Knoxville, TN</span>
+    <span class="city-pill cancelled">Syracuse, NY</span>
+    <span class="city-pill cancelled">Walla Walla, WA</span>
+    <span class="city-pill cancelled">Mountain View, CA</span>
+    <span class="city-pill cancelled">Santa Clara County, CA</span>
+    <span class="city-pill cancelled">San Jose, CA</span>
+    <span class="city-pill cancelled">+ 17 others</span>
+  </div>
+</div>
+
+<footer>
+  <div>
+    © 2026 FlockStats - flockstats.org - Data sourced from public news reports: TechCrunch, CNN, Cybernews, The Register, Star Tribune, NBC DFW, KSTP, Valley News Live, ABC News, Military.com, State of Surveillance. Not affiliated with any organization. For informational purposes only.
+  </div>
+  <div style="display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+    <div>
+      <a href="https://stateofsurveillance.org" target="_blank">State of Surveillance</a> &nbsp;·&nbsp;
+      <a href="https://deflock.me" target="_blank">DeFlock.me</a> &nbsp;·&nbsp;
+      <a href="https://haveIbeenflocked.com" target="_blank">HaveIBeenFlocked</a>
+    </div>
+    <a href="https://nlckysolutions.org" target="_blank" style="display:flex; align-items:center; gap:0.5rem; text-decoration:none; color:var(--muted); margin-left:auto;">
+      <img src="https://nlckysolutions.org/logo.png" alt="NlckySolutions" style="height:20px; width:auto;">
+      <span style="font-size:0.78rem;">NlckySolutions</span>
+    </a>
+  </div>
+</footer>
+
+<script>
+  // ============================================================
+  //  DATA — change numbers here, everything updates automatically
+  // ============================================================
+  const DATA = {
+    incidents: {
+      winona:        10,
+      albany_ga:      2,
+      duluth:         6,
+      dallas:        25,
+      edina:          5,
+      plymouth:       2,
+      eden_prairie:   1,
+      minnetonka:     2,
+      nowthen:        1,
+      alexandria_va:  2,
+      suffolk_va:    13,
+      newport_news:   1,
+      oregon:         9,
+      la_mesa:        2,
+      oakland:        null,
+      upstate_ny:     null,
+      idaho:          1,
+      ashland_oh:     null,
+      west_virginia:  null,
+      michigan:       null,
+      faribault:      1,
+      greenview_il:   null,
+      lisbon_ct:      null,
+      utah:           1,
+      houston:        null,
+      florida_block:  0,   // cardboard blocker not destroyed
+    },
+
+    totalFlockNetwork:  80000,   // Flock's total US camera count
+    documentedCases:    26,      // Institute for Justice case count
+    cancelledCities:    23,      // cities that cancelled contracts
+    statesAffected:     14,      // states with confirmed incidents
+  };
+  // ============================================================
+  //  END DATA — don't need to touch anything below this line
+  // ============================================================
+
+  function compute() {
+    const counts = Object.values(DATA.incidents).filter(v => v !== null && v !== 0);
+    const knownDestroyed = counts.reduce((a, b) => a + b, 0);
+    const unknownIncidents = Object.values(DATA.incidents).filter(v => v === null).length;
+    return { knownDestroyed, unknownIncidents };
+  }
+
+  function render() {
+    const { knownDestroyed, unknownIncidents } = compute();
+    const stillUp = DATA.totalFlockNetwork - knownDestroyed;
+    const pctOnline = (stillUp / DATA.totalFlockNetwork * 100).toFixed(2);
+    const pctDown = (knownDestroyed / DATA.totalFlockNetwork * 100).toFixed(3);
+
+    document.getElementById('stat-destroyed').textContent  = knownDestroyed + '+';
+    document.getElementById('stat-cases').textContent      = DATA.documentedCases + '+';
+    document.getElementById('stat-network').textContent    = '~' + DATA.totalFlockNetwork.toLocaleString();
+    document.getElementById('stat-cities').textContent     = DATA.cancelledCities + '+';
+    document.getElementById('stat-states').textContent     = DATA.statesAffected + '+ states';
+    document.getElementById('badge-cases').textContent     = DATA.documentedCases + '+ documented';
+
+    document.getElementById('pbar-label-right').textContent = pctOnline + '%';
+    document.getElementById('pbar-note').textContent =
+      stillUp.toLocaleString() + ' of ' + DATA.totalFlockNetwork.toLocaleString() +
+      ' cameras still active / ' + pctDown + '% confirmed offline' +
+      ' (' + unknownIncidents + ' incidents with unknown counts not included)';
+  }
+
+  render();
+</script>
+
+</body>
+</html>
