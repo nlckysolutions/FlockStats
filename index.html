@@ -356,7 +356,7 @@
   }
   .ticker-inner {
     display: inline-block;
-    animation: ticker 130s linear infinite;
+    animation: ticker 150s linear infinite;
     animation-play-state: paused;
   }
   .ticker-inner.ticker-ready { animation-play-state: running; }
@@ -408,10 +408,10 @@
   (function () {
     var el = document.getElementById('ticker-inner');
     if (!el) return;
-    var PIXELS_PER_SECOND = 16; // constant scroll speed, independent of how much text the ticker holds
+    var PIXELS_PER_SECOND = 12; // constant scroll speed, independent of how much text the ticker holds
     function startTicker() {
       var distance = el.scrollWidth + window.innerWidth;
-      var duration = Math.max(distance / PIXELS_PER_SECOND, 120);
+      var duration = Math.max(distance / PIXELS_PER_SECOND, 150);
       el.style.animationDuration = duration + 's';
       el.classList.add('ticker-ready');
     }
@@ -476,8 +476,8 @@
   </div>
 
   <div class="week-banner">
-    <strong>Newest:</strong> Norfolk, NE loses 2 highway cameras · Morehead, KY now all 8 vandalized · Newburgh NY, Cle Elum WA, Milwaukee County drop Flock.
-    <span class="banner-totals">151+ incidents · 36 states · 282+ communities · Oct 4, 2026</span>
+    <strong>Newest:</strong> Norfolk, NE loses 2 highway cameras · Morehead, KY all 8 vandalized · Newburgh NY, Cle Elum WA &amp; Milwaukee Co. drop Flock.
+    <span class="banner-totals">151+ incidents · 36 states · 282+ communities · Oct 6, 2026</span>
   
   </div>
 
