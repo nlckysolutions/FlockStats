@@ -416,10 +416,10 @@
   (function () {
     var el = document.getElementById('ticker-inner');
     if (!el) return;
-    var PIXELS_PER_SECOND = 18; // constant scroll speed, independent of how much text the ticker holds
+    var PIXELS_PER_SECOND = 12; // constant scroll speed, independent of how much text the ticker holds
     function startTicker() {
       var distance = el.scrollWidth + window.innerWidth;
-      var duration = Math.max(distance / PIXELS_PER_SECOND, 180);
+      var duration = Math.max(distance / PIXELS_PER_SECOND, 240);
       el.style.animationDuration = duration + 's';
       el.classList.add('ticker-ready');
     }
@@ -484,8 +484,8 @@
   </div>
 
   <div class="week-banner">
-    <strong>Newest:</strong> Granite Falls, WA camera destroyed; San Diego committee votes to cancel Flock; Rockford, MI camera burned.
-    <span class="banner-totals">158+ incidents · 38 states · 297+ communities · Oct 25, 2026</span>
+    <span class="banner-newest"><strong>Newest:</strong> Granite Falls, WA camera destroyed; San Diego committee votes to cancel Flock.</span>
+    <span class="banner-totals">158+ incidents · 38 states · 297+ communities · Oct 26, 2026</span>
   </div>
 
   <div class="incident-list">
